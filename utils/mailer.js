@@ -15,27 +15,35 @@ let specificId = 1;
 async function sendDailyEmails() {
   try {
     const users = await Student.find();
-    console.log(users);
+
     // Send emails to users with PDF and ZIP attachments
     for (const user of users) {
       const { name, email } = user;
 
+      // Check if student's email is valid
+      if (!email) {
+        throw new Error(`Invalid email for student: ${name}`);
+      }
+
       const pdfLink = await FileLink.findOne({
         fileId: specificId,
-      }); // Fetch pdf links of currect day for the user
+      }); // Fetch pdf links of current day for the user
+
       const zipLink = await FileLink.findOne({
         fileId: specificId === 1 ? specificId : specificId - 1,
-      }); // Fetch zip links of the previous for the user
-      //   console.log(zipLink);
+      }); // Fetch zip links of the previous day for the user
+
       if (pdfLink && zipLink) {
         const { pdfUrl } = pdfLink;
         const { zipUrl } = zipLink;
 
-        const message = {
-          from: "prathameshghorpade933@gmail.com",
-          to: email,
-          subject: `Daily Flash ${specificId}`,
-          html: `
+        // Check if PDF and ZIP files exist
+        if (pdfUrl && zipUrl) {
+          const message = {
+            from: "prathameshghorpade933@gmail.com",
+            to: email,
+            subject: `Daily Flash ${specificId}`,
+            html: `
               <div style="font-family: Arial, sans-serif; background-color: #f2f2f2; padding: 20px;">
               <h2 style="color: #333;">Hello, ${name}!</h2>
                 <p style="color: #333;">We have prepared new study materials for you:</p>
@@ -56,11 +64,15 @@ async function sendDailyEmails() {
                 </div>
               </div>
             `,
-        };
+          };
 
-        await transporter.sendMail(message); // Send email to the user
+          await transporter.sendMail(message); // Send email to the user
+          specificId++; // Send email to the user
+        } else {
+          throw new Error("PDF or ZIP file not found!");
+        }
       } else {
-        throw new Error("content is over!");
+        throw new Error("PDF or ZIP link not found!");
       }
     }
     specificId++;
